@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Analysis Tool</title>
+</head>
+<body>
+    <h1>Stock Analysis Tool</h1>
+    <form id="stock-form">
+        <input type="text" id="stock-symbol" placeholder="Enter stock symbol" required>
+        <button type="submit">Analyze</button>
+    </form>
+    <div id="results"></div>
+    
+    <script>
+        document.getElementById('stock-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const symbol = document.getElementById('stock-symbol').value;
+            fetch('/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ stock_symbol: symbol }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = `<h2>Articles:</h2>
+                ${data.articles.map(article => `
+                    <h3>${article.title}</h3>
+                    <p>${article.summary}</p>
+                    <p>Sentiment: ${article.sentiment}</p>
+                `).join('')}
+                <h2>Stock Analysis:</h2>
+                <pre>${JSON.stringify(data.stock_analysis, null, 2)}</pre>`;
+            });
+        });
+    </script>
+</body>
+</html>
