@@ -18,7 +18,7 @@ GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 if not GOOGLE_API_KEY:
     raise ValueError("GOOGLE_API_KEY not found in environment variables")
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-1.5-pro')
 
 # Initialize Flask app
 app = Flask(__name__)
