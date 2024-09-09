@@ -12,19 +12,15 @@ import yfinance as yf
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
-# Load environment variables and configure logging
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
-# Configure Google AI
-#GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-GOOGLE_API_KEY = 'AIzaSyDrL9Q3HdH5uOTgY146W6rkcv-iEj9UAu0'
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 if not GOOGLE_API_KEY:
     raise ValueError("GOOGLE_API_KEY not found in environment variables")
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 
@@ -34,7 +30,6 @@ PROXIES = {
 }
 requests.get('https://google.com', verify=False)
 
-# Constants
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 REQUEST_HEADERS = {
@@ -52,7 +47,7 @@ def stock_suggestions():
         if 'symbol' in tickers:
             suggestions = [tickers['symbol']]
         else:
-            suggestions = list(tickers.keys())[:5]  # Limit to 5 suggestions
+            suggestions = list(tickers.keys())[:5]  #limit 5 change to default
         return jsonify({'suggestions': suggestions})
     except Exception as e:
         logging.error(f"Error fetching stock suggestions: {str(e)}")
@@ -119,14 +114,11 @@ def generate_final_analysis_route():
 
 @app.route('/status', methods=['GET'])
 def get_status():
-    # Implement logic to return current status
-    # This could be stored in a global variable or database
     return jsonify({'status': 'Current status message'})
 
 def fetch_article_content(url):
     for attempt in range(MAX_RETRIES):
         try:
-            # Explicitly disable proxies
             response = requests.get(url, headers=REQUEST_HEADERS, timeout=10, proxies={'http': None, 'https': None})
             response.raise_for_status()
 
@@ -156,7 +148,6 @@ def fetch_articles(stock_ticker, num_articles, start_date):
     url = f"https://finviz.com/quote.ashx?t={stock_ticker}"
 
     try:
-        # Attempt to connect to finviz.com
         response = requests.get(url, headers=REQUEST_HEADERS, timeout=10, proxies={'http': None, 'https': None})
         response.raise_for_status()
 
@@ -182,12 +173,12 @@ def fetch_articles(stock_ticker, num_articles, start_date):
             published_at = cols[0].text.strip()
 
             try:
-                if len(published_at) > 8:  # Full date format
+                if len(published_at) > 8: 
                     article_date = datetime.strptime(published_at, '%b-%d-%y %I:%M%p')
-                else:  # Time only format (assume it's today)
+                else: 
                     article_date = datetime.combine(datetime.now().date(), datetime.strptime(published_at, '%I:%M%p').time())
             except ValueError:
-                article_date = datetime.now()  # Use current date if parsing fails
+                article_date = datetime.now()
 
             if article_date >= start_date and title and link and title not in seen_titles:
                 seen_titles.add(title)
@@ -202,7 +193,6 @@ def fetch_articles(stock_ticker, num_articles, start_date):
                 if len(articles) == num_articles:
                     break
 
-        # Fetch content for selected articles
         with ThreadPoolExecutor() as executor:
             for article in articles:
                 executor.submit(fetch_article_content, article['link'])
@@ -213,17 +203,14 @@ def fetch_articles(stock_ticker, num_articles, start_date):
         logging.error(f"Failed to fetch articles from finviz: {e}")
         logging.error(f"Request details: URL={url}, Headers={REQUEST_HEADERS}")
 
-        # Fallback to Yahoo Finance
         return fetch_articles_from_yahoo(stock_ticker, num_articles, start_date)
 
 def fetch_articles_from_yahoo(stock_ticker, num_articles, start_date):
     try:
         ticker = yf.Ticker(stock_ticker)
 
-        # Convert start_date to datetime object
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
 
-        # Fetch news for the past 30 days from the start date
         news = ticker.news
 
         filtered_news = [
@@ -231,12 +218,10 @@ def fetch_articles_from_yahoo(stock_ticker, num_articles, start_date):
             if datetime.fromtimestamp(article['providerPublishTime']) >= start_date
         ]
 
-        # If no articles found in the specified range, fetch the most recent articles
         if not filtered_news:
             logging.warning(f"No articles found for {stock_ticker} from {start_date}. Fetching most recent articles.")
             filtered_news = news[:num_articles]
 
-        # Ensure we don't exceed the number of available articles
         num_articles = min(num_articles, len(filtered_news))
 
         formatted_articles = []
@@ -263,7 +248,6 @@ def fetch_article_content(url):
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Try to find the main content of the article
         content_selectors = [
             'article', '.article-body', '.article-content', '.story-body',
             '[itemprop="articleBody"]', '.entry-content', '.post-content'
@@ -274,7 +258,6 @@ def fetch_article_content(url):
             if content:
                 return content.get_text(strip=True)
 
-        # If no content found, return None
         return None
     except Exception as e:
         logging.error(f"Error fetching article content: {e}")
